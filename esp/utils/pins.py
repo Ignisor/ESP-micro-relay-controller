@@ -1,24 +1,23 @@
 import machine
-import time
 
 
 ON = 1
 OFF = 0
 
-LED = machine.Pin(2, machine.Pin.OUT)
-BUTTON = machine.Pin(4, machine.Pin.IN, machine.Pin.PULL_UP)  # D2 pin
-RELAY = machine.Pin(14, machine.Pin.OUT)  # D5 pin
+LED = machine.Pin(1, machine.Pin.OUT)
+RELAY = machine.Pin(2, machine.Pin.OUT)  # D5 pin
 RELAY.value(OFF)  # open relay initially
+
+timer = machine.Timer(-1)
 
 
 def open_relay(duration=5):
+    if RELAY.value() == OFF:
+        return False  # don't open if already opened
+
     RELAY.value(OFF)
-    time.sleep(duration)
-    RELAY.value(ON)
+
+    timer.init(period=duration * 1000, mode=machine.Timer.ONE_SHOT, callback=lambda t: RELAY.value(ON))
 
     return True
 
-
-def check_button():
-    if BUTTON.value() == OFF:  # returns 0 when pressed
-        open_relay()
