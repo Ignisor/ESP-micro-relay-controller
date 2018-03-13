@@ -71,13 +71,7 @@ class Server(object):
         conn, addr = self.socket.accept()
         conn.settimeout(1)
 
-        while True:
-            try:
-                data = self._get_data(conn)
-                break
-            except OSError as e:
-                if e.args[0] != EAGAIN:
-                    raise e
+
 
         data_str = bytes.decode(data)  # decode it to string
         request = Request(data_str, addr)
@@ -91,29 +85,50 @@ class Server(object):
 
         conn.close()
 
-    def _get_data(self, connection, chunk_size=128):
-        data = b''
-        while True:
-            chunk = connection.recv(chunk_size)
-            data += chunk
-            if chunk.endswith(b'\r\n\r\n'):
-                return data
-
     def _get_view(self, request):
         key = '{}:{}'.format(request.method.lower(), request.url.lower())
         return self.views.get(key, lambda r: Response(404))
 
 
 class Request(object):
-    def __init__(self, data, addr):
-        if type(data) == str:
-            self.body = data
-        else:
-            self.body = bytes.decode(data)
-
+    def __init__(self, connection, addr):
+        self.conn = connection
         self.address = addr
-        self.method = self.body.split(' ')[0]
-        self.url = self.body.split(' ')[1]
+
+        self._process_headers(self._get_headers())
+
+    def _get_headers(self):
+        while True:
+            try:
+                return self._recieve_headers()
+            except OSError as e:
+                if e.args[0] != EAGAIN:
+                    raise e
+
+    def _get_body(self):
+        while True:
+            try:
+                return self._recieve_body()
+            except OSError as e:
+                if e.args[0] != EAGAIN:
+                    raise e
+
+    def _process_headers(self, headers_str):
+        headers_list = list(filter(lambda i: bool(i), headers_str.split('\r\n')))
+
+        starting_line = headers_list.pop(0)
+
+        self.method, self.url, self.version = starting_line.split()
+
+        #TODO headers dict
+
+    def _recieve_headers(self, chunk_size=128):
+        data = b''
+        while True:
+            chunk = self.conn.recv(chunk_size)
+            data += chunk
+            if chunk.endswith(b'\r\n\r\n'):
+                return bytes.decode(data)
 
 
 class Response(object):
