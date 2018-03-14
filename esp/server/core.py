@@ -130,10 +130,16 @@ class Request(object):
 
         while True:
             try:
-                return self._receive_body(content_len)
+                body = self._receive_body(content_len)
+                break
             except OSError as e:
                 if e.args[0] != EAGAIN:
                     raise e
+
+        if self.headers.get('content-type', '') == 'application/json':
+            body = json.loads(body)
+
+        return body
 
     def _receive_body(self, length, chunk_size=1):
         data = b''
