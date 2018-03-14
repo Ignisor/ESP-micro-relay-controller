@@ -3,8 +3,6 @@ import socket
 from uerrno import EAGAIN, ETIMEDOUT
 import gc
 
-from data import conf
-
 CODE_HEADERS = {
     200: 'OK',
     400: 'Bad Request',
@@ -71,10 +69,7 @@ class Server(object):
         conn, addr = self.socket.accept()
         conn.settimeout(1)
 
-
-
-        data_str = bytes.decode(data)  # decode it to string
-        request = Request(data_str, addr)
+        request = Request(conn, addr)
 
         view = self._get_view(request)
         response = view(request)
@@ -94,40 +89,61 @@ class Request(object):
     def __init__(self, connection, addr):
         self.conn = connection
         self.address = addr
-
-        self._process_headers(self._get_headers())
+        self.headers = self._get_headers()
+        self.body = self._get_body()
 
     def _get_headers(self):
         while True:
             try:
-                return self._recieve_headers()
+                headers = self._receive_headers()
+                break
             except OSError as e:
                 if e.args[0] != EAGAIN:
                     raise e
 
-    def _get_body(self):
+        return self._process_headers(headers)
+
+    def _receive_headers(self, chunk_size=1):
+        data = b''
         while True:
-            try:
-                return self._recieve_body()
-            except OSError as e:
-                if e.args[0] != EAGAIN:
-                    raise e
+            data += self.conn.recv(chunk_size)
+            if data.endswith(b'\r\n\r\n'):
+                return bytes.decode(data)
 
     def _process_headers(self, headers_str):
+        headers = {}
         headers_list = list(filter(lambda i: bool(i), headers_str.split('\r\n')))
 
         starting_line = headers_list.pop(0)
-
         self.method, self.url, self.version = starting_line.split()
 
-        #TODO headers dict
+        for header in headers_list:
+            key, value = header.split(': ')
+            headers[key] = value
 
-    def _recieve_headers(self, chunk_size=128):
+        return headers
+
+    def _get_body(self):
+        content_len = int(self.headers.get('content-length', 0))
+        if content_len == 0:
+            return None
+
+        while True:
+            try:
+                return self._receive_body(content_len)
+            except OSError as e:
+                if e.args[0] != EAGAIN:
+                    raise e
+
+    def _receive_body(self, length, chunk_size=1):
         data = b''
+        received_bytes = 0
         while True:
             chunk = self.conn.recv(chunk_size)
             data += chunk
-            if chunk.endswith(b'\r\n\r\n'):
+            received_bytes += chunk_size
+
+            if received_bytes >= length:
                 return bytes.decode(data)
 
 
