@@ -1,3 +1,5 @@
+import esp; esp.osdebug(None)
+
 import gc
 
 from utils import wifi

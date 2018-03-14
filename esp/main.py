@@ -2,11 +2,12 @@ import sys
 import machine
 
 from data import conf
+from utils.wifi import reset_if_not_connected
 from server import server_app
 
 
 def main_loop():
-    return True
+    return reset_if_not_connected()
 
 
 try:
