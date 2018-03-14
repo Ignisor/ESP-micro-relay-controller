@@ -136,7 +136,7 @@ class Request(object):
                 if e.args[0] != EAGAIN:
                     raise e
 
-        if self.headers.get('content-type', '') == 'application/json':
+        if self.headers.get('Content-Type', '') == 'application/json':
             body = json.loads(body)
 
         return body

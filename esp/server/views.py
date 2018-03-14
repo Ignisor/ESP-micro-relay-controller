@@ -23,4 +23,9 @@ def get_config(request):
 
 @srv.view('POST', '/config/')
 def update_config(request):
-    return Response(200, request.body)
+    with open('data/local_conf.py', 'w') as local_conf:
+        for var, value in request.body.items():
+            line = '{} = {}\n'.format(var, repr(value))
+            local_conf.write(line)
+
+    return Response(200)
