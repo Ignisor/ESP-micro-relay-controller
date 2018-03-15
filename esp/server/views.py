@@ -29,3 +29,11 @@ def update_config(request):
             local_conf.write(line)
 
     return Response(200)
+
+
+@srv.view('GET', '/error/')
+def get_error(request):
+    with open(conf.ERROR_LOG_FILENAME) as error_log:
+        r = Response(200, error_log.read())
+
+    return r

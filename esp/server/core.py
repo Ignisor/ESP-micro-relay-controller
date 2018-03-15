@@ -1,5 +1,7 @@
 import json
 import socket
+
+import time
 from uerrno import EAGAIN, ETIMEDOUT
 import gc
 
@@ -64,6 +66,7 @@ class Server(object):
                         raise e
 
             gc.collect()
+            time.sleep(0.1)
 
     def _handle_connection(self):
         conn, addr = self.socket.accept()
@@ -179,7 +182,10 @@ class Response(object):
     def encode(self):
         yield self.headers.encode()
         if self.content:
-            yield self.content.encode()
+            if type(self.content) == str:
+                self.content = (self.content, )
+            for part in self.content:
+                yield part.encode()
 
 
 class JSONResponse(Response):
