@@ -3,7 +3,6 @@ import network
 import machine
 
 from data import conf
-from utils.pins import LED
 
 ap_if = network.WLAN(network.AP_IF)
 sta_if = network.WLAN(network.STA_IF)
@@ -19,8 +18,11 @@ def toggle_hotspot(status=True):
     ap_if.active(status)
 
 
-def connect(ssid=None, password=None):
+def connect(ssid=None, password=None, indicate=True):
     """Tries to connect to the wi-fi network"""
+    if indicate:  # this is required because LED pin is blocking serial interface on ESP-01
+        from utils.pins import LED
+
     ssid = ssid or conf.SSID
     password = password or conf.PASSWORD
 
@@ -29,9 +31,10 @@ def connect(ssid=None, password=None):
         sta_if.connect(ssid, password)
 
         while not sta_if.isconnected():
-            LED.value(0)  # 0 - is enable for LED
-            time.sleep(0.1)
-            LED.value(1)
+            if indicate:
+                LED.value(0)  # 0 - is enable for LED
+                time.sleep(0.1)
+                LED.value(1)
             time.sleep(0.1)
 
             t = time.time() - t_start
