@@ -9,13 +9,13 @@ from utils.pins import open_relay
 CLIENT_ID = ubinascii.hexlify(machine.unique_id())
 
 
-def main_loop(msg):
+def call_back(msg):
     if msg.decode() == 'down':
         open_relay()
 
 
 mqtt = MQTTClient(CLIENT_ID, conf.MQTT_SERVER)
-mqtt.set_callback(main_loop)
+mqtt.set_callback(call_back)
 mqtt.connect()
 mqtt.subscribe('button/pressed/+')
 
