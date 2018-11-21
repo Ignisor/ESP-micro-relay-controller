@@ -1,19 +1,33 @@
-import sys
 import machine
+import ubinascii
+from umqtt.simple import MQTTClient
 
 from data import conf
-from utils.wifi import reset_if_not_connected
-from server import server_app
+from utils.pins import open_relay
 
 
-def main_loop():
-    return reset_if_not_connected()
+CLIENT_ID = ubinascii.hexlify(machine.unique_id())
 
 
-try:
-    server_app.activate_server(main_loop)
-except Exception as e:
-    # write exception to file and restart a machine in case of error
-    with open(conf.ERROR_LOG_FILENAME, 'w') as err_file:
-        sys.print_exception(e, err_file)
-    machine.reset()
+def call_back(msg):
+    if msg.decode() == 'down':
+        open_relay()
+
+
+mqtt = MQTTClient(CLIENT_ID, conf.MQTT_SERVER)
+mqtt.set_callback(call_back)
+mqtt.connect()
+mqtt.subscribe('button/pressed/+')
+
+
+while True:
+    try:
+        mqtt.wait_msg()
+    except Exception as e:
+        with open(conf.ERROR_LOG_FILENAME, 'w') as err_log:
+            err_log.write(e)
+            err_log.write('\n')
+
+        mqtt.publish('errors/{}'.format(CLIENT_ID).encode(), str(e).encode())
+        mqtt.disconnect()
+        machine.reset()
