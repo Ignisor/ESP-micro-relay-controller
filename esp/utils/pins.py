@@ -4,7 +4,7 @@ import machine
 ON = 1
 OFF = 0
 
-LED = machine.Pin(2, machine.Pin.OUT)
+LED = machine.Pin(1, machine.Pin.OUT)
 
 timer = machine.Timer(-1)
 
